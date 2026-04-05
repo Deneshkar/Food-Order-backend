@@ -49,14 +49,10 @@ const createMenuItem = asyncHandler(async (req, res) => {
     isAvailable,
     preparationTime,
     ingredients,
+    quantity,
   } = req.body;
 
-  if (
-    !name ||
-    !name.trim() ||
-    typeof price === "undefined" ||
-    !category
-  ) {
+  if (!name || !name.trim() || typeof price === "undefined" || !category) {
     res.status(400);
     throw new Error("Name, price, and category are required");
   }
@@ -74,9 +70,12 @@ const createMenuItem = asyncHandler(async (req, res) => {
   }
 
   const numericPrice = Number(price);
-  const numericPreparationTime = preparationTime
-    ? Number(preparationTime)
-    : 20;
+  const numericPreparationTime =
+    typeof preparationTime !== "undefined" ? Number(preparationTime) : 20;
+  const numericQuantity =
+    typeof quantity !== "undefined" && quantity !== ""
+      ? Number(quantity)
+      : 0;
 
   if (Number.isNaN(numericPrice) || numericPrice < 0) {
     res.status(400);
@@ -88,9 +87,19 @@ const createMenuItem = asyncHandler(async (req, res) => {
     throw new Error("Preparation time must be at least 1 minute");
   }
 
+  if (Number.isNaN(numericQuantity) || numericQuantity < 0) {
+    res.status(400);
+    throw new Error("Quantity must be a valid non-negative number");
+  }
+
   const image = req.file
     ? await uploadImageToCloudinary(req.file, "food-order-management/menu")
     : { url: "", publicId: "" };
+
+  const resolvedAvailability =
+    typeof isAvailable !== "undefined"
+      ? parseBoolean(isAvailable, numericQuantity > 0)
+      : numericQuantity > 0;
 
   const menuItem = await MenuItem.create({
     name: name.trim(),
@@ -98,7 +107,8 @@ const createMenuItem = asyncHandler(async (req, res) => {
     price: numericPrice,
     category,
     ingredients: parseIngredients(ingredients),
-    isAvailable: parseBoolean(isAvailable, true),
+    quantity: numericQuantity,
+    isAvailable: numericQuantity === 0 ? false : resolvedAvailability,
     preparationTime: numericPreparationTime,
     image,
     createdBy: req.user ? req.user._id : null,
@@ -211,6 +221,7 @@ const updateMenuItem = asyncHandler(async (req, res) => {
     isAvailable,
     preparationTime,
     ingredients,
+    quantity,
   } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -260,8 +271,23 @@ const updateMenuItem = asyncHandler(async (req, res) => {
     menuItem.price = numericPrice;
   }
 
+  if (typeof quantity !== "undefined") {
+    const numericQuantity = Number(quantity);
+
+    if (Number.isNaN(numericQuantity) || numericQuantity < 0) {
+      res.status(400);
+      throw new Error("Quantity must be a valid non-negative number");
+    }
+
+    menuItem.quantity = numericQuantity;
+
+    if (numericQuantity === 0) {
+      menuItem.isAvailable = false;
+    }
+  }
+
   if (typeof isAvailable !== "undefined") {
-    menuItem.isAvailable = parseBoolean(isAvailable);
+    menuItem.isAvailable = parseBoolean(isAvailable, menuItem.quantity > 0);
   }
 
   if (typeof preparationTime !== "undefined") {

@@ -36,6 +36,12 @@ const menuItemSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    quantity: {
+      type: Number,
+      required: [true, "Quantity is required"],
+      default: 0,
+      min: [0, "Quantity cannot be negative"],
+    },
     isAvailable: {
       type: Boolean,
       default: true,
