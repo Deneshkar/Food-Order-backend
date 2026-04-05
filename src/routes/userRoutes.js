@@ -1,6 +1,7 @@
 const express = require("express");
 
 const {
+  createUserByAdmin,
   getMyProfile,
   updateMyProfile,
   getAllUsers,
@@ -21,6 +22,12 @@ router
 
 router
   .route("/")
+  .post(
+    protect,
+    authorizeRoles("admin"),
+    upload.single("profileImage"),
+    createUserByAdmin
+  )
   .get(protect, authorizeRoles("admin"), getAllUsers);
 
 router

@@ -55,6 +55,13 @@ const syncOrderPaymentFields = async (order, payment) => {
   await order.save();
 };
 
+const clearOrderPaymentFields = async (order) => {
+  order.payment = null;
+  order.paymentStatus = "Pending";
+  order.paymentMethod = "";
+  await order.save();
+};
+
 const isValidPaymentTransition = (currentStatus, nextStatus) => {
   if (currentStatus === nextStatus) {
     return false;
@@ -242,6 +249,101 @@ const getAllPayments = asyncHandler(async (req, res) => {
   });
 });
 
+const updatePayment = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { paymentMethod, paymentStatus, transactionId, notes } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400);
+    throw new Error("Invalid payment ID");
+  }
+
+  const payment = await Payment.findById(id);
+
+  if (!payment) {
+    res.status(404);
+    throw new Error("Payment not found");
+  }
+
+  const isOwner = payment.user.toString() === req.user._id.toString();
+  const isAdmin = req.user.role === "admin";
+
+  if (!isOwner && !isAdmin) {
+    res.status(403);
+    throw new Error("You can only update your own payment");
+  }
+
+  if (typeof paymentMethod !== "undefined") {
+    if (!paymentMethodList.includes(paymentMethod)) {
+      res.status(400);
+      throw new Error(
+        "Valid paymentMethod is required. Use Cash on Delivery, Card, Online Transfer, or Wallet"
+      );
+    }
+
+    payment.paymentMethod = paymentMethod;
+  }
+
+  if (typeof transactionId !== "undefined") {
+    payment.transactionId = transactionId;
+  }
+
+  if (typeof notes !== "undefined") {
+    payment.notes = notes;
+  }
+
+  if (typeof paymentStatus !== "undefined") {
+    if (!paymentStatusList.includes(paymentStatus)) {
+      res.status(400);
+      throw new Error(
+        "Invalid payment status. Use Pending, Paid, Failed, or Refunded"
+      );
+    }
+
+    if (!isAdmin && paymentStatus === "Refunded") {
+      res.status(403);
+      throw new Error("Only admin can mark a payment as refunded");
+    }
+
+    if (payment.paymentStatus !== paymentStatus) {
+      if (!isValidPaymentTransition(payment.paymentStatus, paymentStatus)) {
+        res.status(400);
+        throw new Error(
+          "Invalid payment status transition. Allowed: Pending -> Paid/Failed, Failed -> Pending/Paid, Paid -> Refunded"
+        );
+      }
+
+      payment.paymentStatus = paymentStatus;
+      payment.statusHistory.push({
+        status: paymentStatus,
+      });
+    }
+  }
+
+  const order = await Order.findById(payment.order);
+
+  if (order) {
+    payment.amount = order.totalPrice;
+  }
+
+  applyPaymentStatusDates(payment, payment.paymentStatus);
+  await payment.save();
+
+  if (order) {
+    await syncOrderPaymentFields(order, payment);
+  }
+
+  const populatedPayment = await Payment.findById(payment._id)
+    .populate("order", "totalPrice orderStatus paymentStatus paymentMethod")
+    .populate("user", "name email");
+
+  res.status(200).json({
+    success: true,
+    message: "Payment updated successfully",
+    payment: populatedPayment,
+  });
+});
+
 const updatePaymentStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { paymentStatus } = req.body;
@@ -297,10 +399,49 @@ const updatePaymentStatus = asyncHandler(async (req, res) => {
   });
 });
 
+const deletePayment = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400);
+    throw new Error("Invalid payment ID");
+  }
+
+  const payment = await Payment.findById(id);
+
+  if (!payment) {
+    res.status(404);
+    throw new Error("Payment not found");
+  }
+
+  const isOwner = payment.user.toString() === req.user._id.toString();
+  const isAdmin = req.user.role === "admin";
+
+  if (!isOwner && !isAdmin) {
+    res.status(403);
+    throw new Error("You can only delete your own payment");
+  }
+
+  const order = await Order.findById(payment.order);
+
+  await payment.deleteOne();
+
+  if (order) {
+    await clearOrderPaymentFields(order);
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Payment deleted successfully",
+  });
+});
+
 module.exports = {
   recordPayment,
   getMyPayments,
   getPaymentById,
   getAllPayments,
+  updatePayment,
   updatePaymentStatus,
+  deletePayment,
 };

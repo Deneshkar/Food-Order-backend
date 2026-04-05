@@ -93,6 +93,37 @@ const getMyReviews = asyncHandler(async (req, res) => {
   });
 });
 
+const getReviewById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400);
+    throw new Error("Invalid review ID");
+  }
+
+  const review = await Review.findById(id)
+    .populate("user", "name profileImage")
+    .populate("menuItem", "name image averageRating numberOfReviews");
+
+  if (!review) {
+    res.status(404);
+    throw new Error("Review not found");
+  }
+
+  const isOwner = review.user._id.toString() === req.user._id.toString();
+  const isAdmin = req.user.role === "admin";
+
+  if (!isOwner && !isAdmin) {
+    res.status(403);
+    throw new Error("You can only view your own review");
+  }
+
+  res.status(200).json({
+    success: true,
+    review,
+  });
+});
+
 const updateReview = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { rating, comment } = req.body;
@@ -181,6 +212,7 @@ module.exports = {
   addReview,
   getMenuItemReviews,
   getMyReviews,
+  getReviewById,
   updateReview,
   deleteReview,
 };

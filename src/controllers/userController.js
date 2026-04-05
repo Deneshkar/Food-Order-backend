@@ -15,6 +15,70 @@ const escapeRegex = (value) => {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };
 
+const createUserByAdmin = asyncHandler(async (req, res) => {
+  const { name, email, password, phone, address, role } = req.body;
+
+  if (!name || !email || !password) {
+    res.status(400);
+    throw new Error("Name, email, and password are required");
+  }
+
+  const trimmedName = name.trim();
+  const normalizedEmail = email.toLowerCase().trim();
+
+  if (!trimmedName) {
+    res.status(400);
+    throw new Error("Name cannot be empty");
+  }
+
+  if (!normalizedEmail) {
+    res.status(400);
+    throw new Error("Email cannot be empty");
+  }
+
+  if (password.length < 6) {
+    res.status(400);
+    throw new Error("Password must be at least 6 characters long");
+  }
+
+  const existingUser = await User.findOne({ email: normalizedEmail });
+
+  if (existingUser) {
+    res.status(400);
+    throw new Error("User already exists with this email");
+  }
+
+  let profileImage = "";
+  let profileImagePublicId = "";
+
+  if (req.file) {
+    const uploadedImage = await uploadImageToCloudinary(
+      req.file,
+      "food-order-management/profiles"
+    );
+
+    profileImage = uploadedImage.url;
+    profileImagePublicId = uploadedImage.publicId;
+  }
+
+  const user = await User.create({
+    name: trimmedName,
+    email: normalizedEmail,
+    password,
+    phone: typeof phone !== "undefined" ? phone.trim() : "",
+    address: typeof address !== "undefined" ? address.trim() : "",
+    role: role && ["user", "admin"].includes(role) ? role : "user",
+    profileImage,
+    profileImagePublicId,
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "User created successfully",
+    user: sanitizeUser(user),
+  });
+});
+
 const getMyProfile = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
@@ -326,6 +390,7 @@ const deleteUserByAdmin = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  createUserByAdmin,
   getMyProfile,
   updateMyProfile,
   getAllUsers,

@@ -5,15 +5,27 @@ const {
   getMyPayments,
   getPaymentById,
   getAllPayments,
+  updatePayment,
   updatePaymentStatus,
+  deletePayment,
 } = require("../controllers/paymentController");
 const { protect, authorizeRoles } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-router.route("/").post(protect, recordPayment).get(protect, authorizeRoles("admin"), getAllPayments);
+router
+  .route("/")
+  .post(protect, recordPayment)
+  .get(protect, authorizeRoles("admin"), getAllPayments);
+
 router.route("/my-payments").get(protect, getMyPayments);
-router.route("/:id").get(protect, getPaymentById);
+
+router
+  .route("/:id")
+  .get(protect, getPaymentById)
+  .put(protect, updatePayment)
+  .delete(protect, deletePayment);
+
 router
   .route("/:id/status")
   .patch(protect, authorizeRoles("admin"), updatePaymentStatus);

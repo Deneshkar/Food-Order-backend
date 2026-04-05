@@ -10,7 +10,9 @@ const {
   getMyOrders,
   getOrderById,
   getAllOrders,
+  updateOrder,
   updateOrderStatus,
+  deleteOrder,
 } = require("../controllers/orderController");
 const { protect, authorizeRoles } = require("../middleware/authMiddleware");
 
@@ -22,8 +24,18 @@ router.route("/cart/:menuItemId").put(protect, updateCartItemQuantity);
 router.route("/cart/:menuItemId").delete(protect, removeCartItem);
 
 router.route("/my-orders").get(protect, getMyOrders);
-router.route("/").post(protect, placeOrder).get(protect, authorizeRoles("admin"), getAllOrders);
-router.route("/:id").get(protect, getOrderById);
+
+router
+  .route("/")
+  .post(protect, placeOrder)
+  .get(protect, authorizeRoles("admin"), getAllOrders);
+
+router
+  .route("/:id")
+  .get(protect, getOrderById)
+  .put(protect, updateOrder)
+  .delete(protect, deleteOrder);
+
 router
   .route("/:id/status")
   .patch(protect, authorizeRoles("admin"), updateOrderStatus);
