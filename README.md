@@ -1,6 +1,6 @@
 # Food Order Management System Backend
 
-REST API backend for a food ordering platform with authentication, role-based access, menu and category management, cart/order flow, payments, reviews, and user profile/admin features.
+REST API backend for a food ordering platform with authentication, role-based access, menu and category management, cart and order flow, payments, reviews, and user profile and admin features.
 
 ## Tech Stack
 
@@ -34,38 +34,38 @@ backend/
 
 ## Prerequisites
 
-- Node.js 18+ recommended
+- Node.js 18+
 - npm 9+
 - MongoDB connection string
 - Cloudinary account (for image uploads)
 
-## Getting Started
+## Quick Start
 
-1. Install dependencies:
+1. Install dependencies.
 
 ```bash
 npm install
 ```
 
-2. Create a `.env` file in the project root (`backend/.env`) with the variables below.
+2. Create `.env` in the project root with the variables below.
 
-3. Start in development mode:
+3. Start development server.
 
 ```bash
 npm run dev
 ```
 
-4. Start in production mode:
+4. For production run.
 
 ```bash
 npm start
 ```
 
-By default, the API runs on `http://localhost:5000`.
+By default, the API runs at `http://localhost:5000`.
 
 ## Environment Variables
 
-Create `.env` in the project root and configure:
+Create `.env` in the project root:
 
 ```env
 PORT=5000
@@ -85,10 +85,7 @@ CLOUDINARY_API_SECRET=your_api_secret
 
 - Local: `http://localhost:5000`
 - API root: `/api`
-
-Health check:
-
-- `GET /` -> returns service status message
+- Health check: `GET /`
 
 ## Authentication
 
@@ -98,7 +95,7 @@ Protected endpoints require:
 Authorization: Bearer <jwt_token>
 ```
 
-Role-restricted endpoints use `admin` authorization on top of JWT auth.
+Role-restricted endpoints additionally require `admin` authorization.
 
 ## Main API Endpoints
 
@@ -166,28 +163,28 @@ Role-restricted endpoints use `admin` authorization on top of JWT auth.
 
 ## Admin Seeder
 
-Create or update the default admin user:
+Create or update the admin user:
 
 ```bash
 npm run seed:admin
 ```
 
-Current hardcoded default admin in seeder:
+The default credentials are currently defined in `src/seeder/createAdmin.js`.
 
-- Email: `dk@gmail.com`
-- Password: `123456`
+Security note:
 
-Update this in `src/seeder/createAdmin.js` before production use.
+- Do not use hardcoded default credentials in production.
+- Rotate admin credentials before first deployment.
 
 ## Scripts
 
-- `npm run dev` -> run with nodemon
-- `npm start` -> run with node
-- `npm run seed:admin` -> create/update admin user
+- `npm run dev`: run with nodemon
+- `npm start`: run with node
+- `npm run seed:admin`: create or update admin user
 
 ## Error Response Pattern
 
-Errors are returned in JSON, for example:
+Errors are returned in JSON format:
 
 ```json
 {
