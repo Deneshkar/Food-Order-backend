@@ -414,12 +414,11 @@ const deletePayment = asyncHandler(async (req, res) => {
     throw new Error("Payment not found");
   }
 
-  const isOwner = payment.user.toString() === req.user._id.toString();
   const isAdmin = req.user.role === "admin";
 
-  if (!isOwner && !isAdmin) {
+  if (!isAdmin) {
     res.status(403);
-    throw new Error("You can only delete your own payment");
+    throw new Error("Only admin can delete payments");
   }
 
   const order = await Order.findById(payment.order);

@@ -24,7 +24,7 @@ router
   .route("/:id")
   .get(protect, getPaymentById)
   .put(protect, updatePayment)
-  .delete(protect, deletePayment);
+  .delete(protect, authorizeRoles("admin"), deletePayment);
 
 router
   .route("/:id/status")
